@@ -4,8 +4,6 @@ Script for standardised and scalable conversion of maintenance work orders to MT
 @authors: Tyler Bikaun & Melinda Hodkiewicz
 '''
 
-# Import libraries
-import yaml
 import json
 import math
 import pandas as pd
@@ -13,30 +11,33 @@ import numpy as np
 from datetime import date, datetime
 import reliability as rb
 import weibull as wb
-from statsmodels.distributions.empirical_distribution import ECDF
-import scipy.stats as st
-from math import sqrt
+# import scipy.stats as st
 import re
 import time
 from pathlib import Path
-
 from utils import load_config, json2csv
 
 
 class DataLoader:
-    """ Token and work order data loader """
+    '''Data loader, preprocessor and tokenizer'''
     def __init__(self, config):
         self.config = config
         self.workorder_path = config['File']['workorderPath']
         self.workorder_col_names = config['Data']['workorderColNames']
-
+        
         self.create_token_lists()
         self.load_workorders()
 
     def load_tokens(self):
-        """ Loads SME defined tokens / term data from Gazetteer 
-            Note: format of token data must be col ['Term', 'Action'] """
-            
+        ''' 
+        Loads pre-defined end-of-life terms from Gazetteer
+        
+        Notes
+        -----
+        Format of token data must have the columns: ['Term', 'Action'] 
+
+        '''
+
         self.token_data = pd.read_excel(Path(self.config['File']['outputDir']) / 'token_file.xlsx')
         self.token_data = self.token_data[['Term', 'Action']]
         
@@ -46,7 +47,10 @@ class DataLoader:
         print(f'{datetime.now()}: Loaded tokens from disk.')
 
     def create_token_lists(self):
-        """ Creates token lists for repair and replacement events """
+        ''' 
+        Creates token lists for repair and replacement events
+        
+        '''
         
         self.load_tokens()
         
@@ -64,14 +68,21 @@ class DataLoader:
         self.replace_selection = list(set(self.replace_selection).difference(set(self.repair_selection)))
 
     def load_workorders(self):
-        """ Loads workorder data from disk """
+        ''' 
+        Loads workorder data from disk
+
+        Notes
+        -----
+        Requires pyxlsb library to open binary (xlsb) file.
+        
+        Dates are based off of the reference date 693594
+        (see: https://stackoverflow.com/questions/6706231/fetching-datetime-from-float-in-python)
+
+        '''
         
         if self.workorder_path.split('.')[-1] == 'xlsb':
-            # Note: required pyxlsb library (pip install pyxlsb)
             self.mntn_data_all = pd.read_excel(self.workorder_path, engine = 'pyxlsb')
-
             # Convert int date to datetime objects
-            # Note: Reference date = 693594 -> https://stackoverflow.com/questions/6706231/fetching-datetime-from-float-in-python
             date_cols = [self.workorder_col_names['woCreationDate'],
                         self.workorder_col_names['woBasicStartDate'],
                         self.workorder_col_names['woBasicFinishDate'],
@@ -88,10 +99,9 @@ class DataLoader:
 
 
 class DataWrangler(DataLoader):
-    """ Wrangler for work order data """
+    '''Wrangler for work order data'''
     def __init__(self, config):
         DataLoader.__init__(self, config)
-
         self.filters = config['Data']['filters']
         self.cmms_type = config['Data']['CMMSType']
         
@@ -101,7 +111,13 @@ class DataWrangler(DataLoader):
         self.identify_fs()
 
     def data_preprocess(self):
-        """ Preprocess data - name normalisation, data type changes, basic filtering etc. """
+        ''' 
+        Preprocesses maintenance work order records including:
+            - name normalisation
+            - data type changes
+            - filtering using domain logic 
+        
+        '''
 
         start_size = len(self.mntn_data_all)
 
@@ -179,20 +195,25 @@ class DataWrangler(DataLoader):
         print(f'{datetime.now()}: Original Size: {start_size} -> Filtered Size: {len(self.mntn_data)}')
 
     def return_to_function(self):
-        """ Determines return to function (RTF) of workorder 
+        ''' 
+        Determines return to function (RTF) of workorder
         
-            State changing activities ONLY. Material changes (condition -> condition)
+        Notes
+        -----
+        State changing activities ONLY. Material changes (condition -> condition).
+        We are not accounting for repair activities
+        
+        For JDE CMMS - there is sufficient information available to determine RTF classifications
+        from structure fields alone. Future work will include validation of these classifications using NLP.
+        
+        For SAP/1SAP CMMS - RTF cannot be determined as sufficient detail is not available (for our experiments at least)
+        Future work will use NLP to discrete more concrete RTF classifications. However, in the meantime we use
+        work order type classification to make these classifications, e.g. PM01/PM03 -> REACTIVE_SUPERSET and 
+        PM02 -> PROACTIVE_SUPERSET
 
-            We are not accounting for repair activities
-
-            Future validation methods:
-                # Proactive -> IF NOT STRUCTURED FORMAT -> REGEX
-                # Reactive -> IF TERM IN TERMS LIST RELATES TO REBUILD/REPAIR/REPLACE/OVERHAUL
-        """
+        '''
 
         if self.cmms_type == 'JDE':
-            # For JDE CMMS there is sufficient information available to determine RTF classifications
-            # NLP will be used for the validation process (TODO: Future work)
             ACTIVITY_TYPE_LIST = ['REPAIR', 'OVERHAUL', 'REBUILD']  # Note: JDE doesn't have REPLACE; This is JDE specific, not an available field in SAP/1SAP
             
             # Filter out repair events. TODO: Make robust for cost OR time
@@ -208,17 +229,6 @@ class DataWrangler(DataLoader):
                                                             np.nan))
 
         if self.cmms_type in ['SAP', '1SAP']:
-            # For SAP CMMS where RTF classifications cannot be determined as sufficient detail
-            # is not available, NLP will be used to identify Repair/Replace/Overhaul/Rebuil activity
-            # types from work order text.
-
-            # column RETURN_TO_FUNCTION_SUPERSET
-            # change names
-            #     PM01/PM03 -> REACTIVE_SUPERSET -> RTF ONLY USING NLP
-            #     PM02 -> PROACTIVE_SUPERSET -> RTF ONLY USING NLP
-
-            # TODO: Implement the NLP validation as specified above. In the meantime, using PM01/02/03 as proxies for state changing activities...
-
             # Filter out work orders with cost under threshold. TODO: Make robust for cost OR time
             if 'TOTAL_ACTUAL_COST' in self.mntn_data.columns:
                 self.mntn_data = self.mntn_data.drop(self.mntn_data[(self.mntn_data['TOTAL_ACTUAL_COST'] < self.filters['costMin'])].index)
@@ -233,7 +243,15 @@ class DataWrangler(DataLoader):
                                                             np.nan))
 
     def token_match(self):
-        """ Matches _Repair and _Replace tokens in gazetteers with work order free-text """
+        ''' 
+        Matches _Repair and _Replace tokens in gazetteers with work order free-text
+        
+        Notes
+        -----
+
+
+        '''
+
         self.mntn_data['REPAIR_OR_REPLACE'] = np.where(self.mntn_data['WO_DESCRIPTION'].apply(lambda x: any(item for item in self.repair_selection if item in x)),
                                                         'REPAIR', 
                                                         np.where(self.mntn_data['WO_DESCRIPTION'].apply(lambda x: any(item for item in self.replace_selection if item in x)),
@@ -241,8 +259,15 @@ class DataWrangler(DataLoader):
                                                         np.nan))
 
     def identify_fs(self):
-        """ Identifies failures and suspensions in work order data and calculated columns """
-        # TODO: Repair doesn't matter in EOL terms as we do not use them in either case
+        ''' 
+        Identifies failures and suspensions in work order data and calculated columns
+        
+        Notes
+        -----
+        TODO: Repair doesn't matter in EOL terms as we do not use them in either case
+
+        '''
+
         try:
             self.mntn_data['FAILURE_OR_SUSPENSION'] = np.where((self.mntn_data['RETURN_TO_FUNCTION'] == 'REACTIVE') & (self.mntn_data['REPAIR_OR_REPLACE'] == 'REPLACE'),
                                                                 'FAILURE',
@@ -254,7 +279,7 @@ class DataWrangler(DataLoader):
 
 
 class ParameterEstimator(DataWrangler):
-    """ Outputs MTBF, Beta, Eta and associated failure instances (free-text) in JSON"""
+    ''' Outputs MTBF, Beta, Eta and associated failure instances (free-text) in JSON'''
     def __init__(self, config):
         DataWrangler.__init__(self, config)
 
@@ -267,7 +292,14 @@ class ParameterEstimator(DataWrangler):
         self.save_results()
 
     def preprocess_fs_data(self):
-        """ Extracts only relevant information from work order data for reliability parameter estimations """
+        ''' 
+        Extracts only relevant information from work order data for reliability parameter estimations
+        
+        Notes
+        -----
+
+
+        '''
         
         # Group by asset and time, sort newest to oldet (reference is ACTUAL_START_DATE). TODO: Validate the date is correct (was CREATION_DATE)
         self.mntn_data = self.mntn_data.sort_values(by=['FUNCTIONAL_LOC', 'ACTUAL_START_DATE'], ascending=True)
@@ -301,12 +333,14 @@ class ParameterEstimator(DataWrangler):
         self.mntn_data_fs_ss_counts = self.mntn_data_fs_ss.groupby(['FUNCTIONAL_LOC'])['FAILURE_OR_SUSPENSION'].agg(['count', count_failure, count_suspension])
 
     def calculate_mtbf(self):
-        """ Calculates MTBF from two parameter Weibull 
-
-            This is adapted from the following notebook: https://github.com/uwasystemhealth/weibull-python/blob/master/weibull-python.ipynb
-            
-            Note: Failure (F) = 1 and Suspension (S) = 0
-        """
+        ''' 
+        Calculates MTBF by fitting 2-parameter parameter Weibull
+        
+        Notes
+        -----
+        Adapted from the following notebook: https://github.com/uwasystemhealth/weibull-python/blob/master/weibull-python.ipynb
+        Where Failure (F) = 1 and Suspension (S) = 0
+        '''
 
         fs_data = self.mntn_data_fs_ss.copy()
 
@@ -321,23 +355,27 @@ class ParameterEstimator(DataWrangler):
         fs_data_ss = fs_data_ss.groupby(['FUNCTIONAL_LOC']).filter(lambda x: self.no_data_points <= len(x))
 
         def compute_single_mtbf(series):
-            """
-            Computes a single MTBF estimate via 2P Weibull plot fitting.
+            '''
+            Computes a single MTBF estimate via 2P Weibull plot fitting for a series of failure/suspension data
             
-            Notes:
-            - All events with 0.0 time (first occurences) are filtered out
-            - How do we deal with only censored events?
-            - For censored and failure data, does the Fit_Weibull_2P AND wb.Analysis need both times? see note below.
-            
-            Arguments
-            ---------
-            series : Pandas Series object
+           
+            Parameters
+            ----------
+            series: Pandas Series object
                 Event occurence and time
+            
             Returns
             -------
-            MTBF : float
-                mean time to failure
-            """
+            MTBF: Float
+                Mean time between failure
+                
+            Notes
+            -----
+            All events with 0.0 time (first occurences) are filtered out
+            If the series only has suspension events, no MTBF is determined and is passed.
+             
+            '''
+            
             series = series[0 < series['TIME']]   # do not take into account any events that have 0 time...
             
             failures = series[series['FAILURE_OR_SUSPENSION']==1]
@@ -351,7 +389,7 @@ class ParameterEstimator(DataWrangler):
                 wbfit = rb.Fitters.Fit_Weibull_2P(failures=failure_times,
                                                 right_censored=right_censored_times,
                                                 show_probability_plot=False)
-                # should this analysis below have censored data in it? it isnt in the original notebook
+
                 analysis = wb.Analysis(data=failure_times)
                 analysis.fit()
                 analysis.beta = wbfit.beta
@@ -366,7 +404,6 @@ class ParameterEstimator(DataWrangler):
                 analysis.eta = wbfit.alpha
                 return pd.Series([analysis.mtbf, analysis.beta, analysis.eta])
             else:
-                # print('ONLY CENSORED EVENTS')
                 pass
         
         # Init empty dataframe
@@ -376,11 +413,14 @@ class ParameterEstimator(DataWrangler):
         self.mtbf_data[['MTBF', 'BETA', 'ETA']] = fs_data_ss.groupby(['FUNCTIONAL_LOC']).apply(lambda grp: compute_single_mtbf(grp))
         
     def save_results(self):
-        """ Convert data to JSON and save to disk """
+        '''
+        Convert data to JSON and saves to disk
+        
+        '''        
 
         total_cost_or_time_col = 'TOTAL_ACTUAL_COST' if 'TOTAL_ACTUAL_COST' in self.mntn_data.columns else 'TOTAL_ACTUAL_HOURS'
         
-        # If no cost or time information is specified, set as 0.
+        # If no cost or time information is specified, set as 0
         if total_cost_or_time_col not in self.mntn_data.columns:
             self.mntn_data[total_cost_or_time_col] = 0
 
@@ -419,7 +459,6 @@ class ParameterEstimator(DataWrangler):
                     'SUSPENSION': int(self.mntn_data_fs_ss_counts.loc[floc]['count_suspension']),
                     'TOTAL': len(self.mntn_data[self.mntn_data['FUNCTIONAL_LOC'] == floc])
                 },
-                # TODO: Fix issue with having to filter nan via 'nan' strings rather than .notnull() or .isnan()...
                 'WO_DESCRIPTIONS_FS': self.mntn_data[(self.mntn_data['FUNCTIONAL_LOC'] == floc) & (self.mntn_data['FAILURE_OR_SUSPENSION'] != 'nan')][['WO_DESCRIPTION', total_cost_or_time_col, 'WO_CLASSIFICATION', 'RETURN_TO_FUNCTION', 'REPAIR_OR_REPLACE','FAILURE_OR_SUSPENSION', 'TIME']].to_dict(),
                 'WO_DESCRIPTION_NFS': self.mntn_data[(self.mntn_data['FUNCTIONAL_LOC'] == floc) & (self.mntn_data['FAILURE_OR_SUSPENSION'] == 'nan')][['WO_DESCRIPTION', total_cost_or_time_col, 'WO_CLASSIFICATION', 'RETURN_TO_FUNCTION', 'REPAIR_OR_REPLACE','FAILURE_OR_SUSPENSION', 'TIME']].to_dict() # Filtered using NaN in F/S column
             }
@@ -430,10 +469,19 @@ class ParameterEstimator(DataWrangler):
         if self.config['File']['saveCSV']:
             cost_or_hours = 'hours' if self.config['Data'].get('TOTAL_ACTUAL_HOURS') else 'cost'
             json2csv(Path(self.config['File']['outputDir']) / 'mtbf_results.json', Path(self.config['File']['outputDir']) / 'mtbf_results.csv', cost_or_hours)
-        
             
 
 def controller(config_path: str):
+    ''' 
+    Controller for maintenance work order to mean-time-to-failure pipeline
+    
+    Parameters
+    ----------
+    config_path : Str
+        Path to configuration file on disk
+
+    '''
+    
     start_time = time.time()
     config = load_config(path = config_path)
     ParameterEstimator(config)

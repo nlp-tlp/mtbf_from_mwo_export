@@ -1,41 +1,70 @@
 '''
-Utilities and connection functions
+Utilities and connection functions for pipeline.
 
 @author: Tyler Bikaun
 '''
 
 import yaml
-import sys, traceback
 import json
 import pandas as pd
 
-def load_config(path=None):
-    """Loads configuration file from disk"""
+def load_config(path: str=None):
+    ''' 
+    Loads configuration file from disk.
+    
+    Parameters
+    ----------
+    path: Str
+        Path to YAML configuration file on disk
+    Returns
+    -------
+    config: Dict
+        YAML configuration object as Python dictionary
+    '''
+    
     if path is None:
-        path = r'config.yaml'
-
+        path = 'config_template.yaml'
     try:
         with open(path) as file:
-            config = yaml.load(file, Loader=yaml.FullLoader)
+            config = yaml.load(file, Loader = yaml.FullLoader)
         return config
     except Exception as e:
         print(e)
         
         
-def json2csv(json_path: str, csv_path: str, cost_or_hours: str):
-    ''' Converts JSON file to CSV for improved readability of model results'''
+def json2csv(json_path: str, csv_path: str, cost_or_hours: str='hours'):
+    ''' 
+    Converts pipeline output from JSON to CSV for improved readability of results.
+    
+    Parameters
+    ----------
+    json_path: Str
+        Path to results in JSON format
+    csv_path: Str
+        Desired path to save results in CSV format
+    cost_or_hours: Str
+        Structured field used in configuration file to discriminate detected EOL events
+    
+    '''
+    
+    assert json_path.split('.')[-1] == 'json'
+    assert csv_path.split('.')[-1] == 'csv'
     
     with open(json_path, 'r') as fjr:
         data = json.load(fjr)
 
-    # Create FLOC: MTTF pairs
-    floc_mttf_data = {'FLOC': [], 'MTTF': [], 'ETA': [], 'BETA': [], 'COUNTS': [], 'WO_FS_DESC': [], 'WO_FS_TIME': [], f'WO_FS_{cost_or_hours.upper()}': [], "WO_FS_CLF": [], "WO_FS_FOS": [],
-                    'WO_NFS_DESC': [], f'WO_NFS_{cost_or_hours.upper()}': [], "WO_NFS_CLF": []}
+    # Create functional location MTBF pairs
+    floc_mttf_data = {'FLOC': [], 'MTTF': [], 'ETA': [], 'BETA': [],
+                      'COUNTS': [], 'WO_FS_DESC': [], 'WO_FS_TIME': [],
+                      f'WO_FS_{cost_or_hours.upper()}': [], "WO_FS_CLF": [],
+                      "WO_FS_FOS": [], 'WO_NFS_DESC': [],
+                      f'WO_NFS_{cost_or_hours.upper()}': [], "WO_NFS_CLF": []
+                      }
     
     data = data["RESULTS"] if "RESULTS" in list(data.keys()) else data
     
+    # Iterate over data and create structured records
     for result in data:
-        
         floc = result
         mttf = data[result]["MTTF"] 
         eta = data[result]["ETA"]
@@ -69,8 +98,9 @@ def json2csv(json_path: str, csv_path: str, cost_or_hours: str):
     df.to_csv(csv_path, index = False)
 
 if __name__ == '__main__':
-    mttf_fname_json = r'exp/A/results collocation/eval_A_S3.json'
+    mttf_fname_json = 'results.json'
     mttf_fname_csv = f'{mttf_fname_json.split(".")[0]}.csv'
     
-    # If no structured fields used, default to 'hours'
-    json2csv(json_path = mttf_fname_json, csv_path = mttf_fname_csv, cost_or_hours = 'cost')
+    json2csv(json_path = mttf_fname_json,
+             csv_path = mttf_fname_csv,
+             cost_or_hours = 'cost')

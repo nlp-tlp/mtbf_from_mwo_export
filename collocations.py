@@ -1,8 +1,9 @@
 '''
-Script for identifying bigram collocations.
+Collocation identification via iterative cycling with human-in-the-loop over maintenance record descriptions.
 
 @author: Tyler Bikaun
 '''
+
 
 import yaml
 import itertools
@@ -15,14 +16,26 @@ import pandas as pd
 from term_expansion import DataLoader
 from utils import load_config
 
-def get_collocations(docs: list, n: int = 100):
-    ''' Find top collocations in text. These are then converted into conjunctions with a delimiter.
-    "Collocations are expressions of multiple words which commonly co-occur."
+def get_collocations(docs: list, n: int = 100) -> list:
+    ''' 
+    Finds top collocations in unstructured text field that are converted into conjunctions with a delimiter.
     
-    Note: counters can have mathematical operations applied to them.
+    Parameters
+    ----------
+    docs: list
+        List of tokenized documents
+    n: int
+        Number of collocations to return
     
+    Returns
+    -------
+    collocations_kept: list
+        List of collocations kept by user
     
-    Ref: https://stackoverflow.com/questions/4128583/how-to-find-collocations-in-text-python
+    Notes
+    -----
+    Counters can have mathematical operations applied to them.
+
     '''
     
     active = True
@@ -39,30 +52,33 @@ def get_collocations(docs: list, n: int = 100):
     while active:
         for col in collocations.most_common(n):
             col_ngram = f'{col[0][0]} {col[0][1]}'
-            
             output_str =f'{col_ngram:<20} : {col[1]:<5} ({(int(col[1])/len(docs))*100:0.2f}%)'
-
             decision = input(f'{output_str} | Add to collocations (Y/N)? ')
             decision = decision.lower()
-            
             if decision == 'y':
                 collocations_kept.extend([col_ngram])
-            
         active = False
         
     return collocations_kept
 
 def controller(config_path: str):
+    '''
+    Controls collocation building and collection process
+    
+    Parameters
+    ----------
+    config_path: Str
+        Path to configuration file
+        
+    '''
+    
     config = load_config(config_path)
     # load data
     dl = DataLoader(config)
-    
     # Get collocations
     collocations = get_collocations(docs = dl.data, n = config['Settings']['collocationCandidates'])
-    
     # Add to token file
     token_df = pd.read_excel(Path(config['File']['outputDir']) / 'token_file.xlsx')
-    
     if len(collocations) > 0:
         collocation_df = pd.DataFrame(data=zip(collocations, ['_Replace']*len(collocations)), columns=['Term', 'Action'])
         # Add collocations to tokens
@@ -70,7 +86,6 @@ def controller(config_path: str):
         # Save token list to disk and return as df to downstream components
         token_path = Path(config['File']['outputDir']) / 'token_file.xlsx'
         token_df.to_excel(token_path, index = False)
-        
     print(f'{datetime.now()}: {len(collocations)} collocations added to token file')
 
 if __name__ == '__main__':

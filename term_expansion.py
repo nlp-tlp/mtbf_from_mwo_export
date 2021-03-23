@@ -1,10 +1,10 @@
-"""
-Expands initial terms list and validates using contextual word embedding techniques
+'''
+End-of-life iterative term expansion process using domain-specific pre-trained word embeddings.
 
 @author: Tyler Bikaun
-"""
-# Standard libraries
-import yaml
+'''
+
+
 import pandas as pd
 import numpy as np
 import sys, traceback
@@ -12,14 +12,9 @@ import time
 import re
 from datetime import datetime
 from pathlib import Path
-
-# NLP specific libraries
-import nltk
 from gensim.models import Word2Vec
-from gensim.models import Phrases
-from gensim.models.phrases import Phraser
-
 from utils import load_config
+
 
 class DataLoader:
     def __init__(self, config):
@@ -27,6 +22,10 @@ class DataLoader:
         self.load_csv()
 
     def load_csv(self):
+        ''' 
+        Loads data in CSV format from disk and performs light preprocessing and tokenization
+        '''
+        
         df = pd.read_csv(self.config['File']['workorderPath'])
         df = df[self.config['Data']['workorderColNames']['WO_DESCRIPTION']].str.lower()
         shorttext_docs = df.tolist()
@@ -41,6 +40,10 @@ class DataLoader:
         print(f'Processed {len(self.data)} MWOs')
 
     def get_stats(self):
+        ''' 
+        Provides average token length of documents in data set
+        '''
+        
         doc_lens = [len(doc) for doc in self.data]
         print(f'Average Tokens in MWOs: {sum(doc_lens)/len(doc_lens):0.2f} ({max(doc_lens)} max | {min(doc_lens)} min)')
 
@@ -51,8 +54,26 @@ class EmbeddingTrainer:
         self.window_size = 3
         self.model_size = 300
     
-    def train_model(self, docs, iterations: int = 50):
-        ''' '''
+    def train_model(self, docs: list, iterations: int = 50):
+        ''' 
+        Trains for word2vec embedding model and provides summary of results
+        
+        Parameters
+        ----------
+        docs : list
+            List of tokenized maintenance work order record descriptions
+        iterations : int
+            Number of iterations to run the word2vec model for
+        
+        Returns
+        -------
+        w2v_model : Word2Vec object
+        
+        Notes
+        -----
+        See: https://radimrehurek.com/gensim/models/word2vec.html#gensim.models.word2vec.Word2Vec
+
+        '''
         w2v_model = Word2Vec(sentences = docs,
                                 size = self.model_size,
                                 min_count = self.min_token_count,
@@ -61,20 +82,42 @@ class EmbeddingTrainer:
                                 )
         print(f'Model summary:\n {w2v_model}')
         return w2v_model
-            
+
+
 class EOLExpander:
-    def __init__(self):
-        pass
-    
-    def expand_terms(self, model, docs, terms, topn: int = 10, mode: str = '_Replace'):
-        ''' Uses word embeddings to expand set of terms within documents '''
+    def expand_terms(self, model, docs: list, terms, topn: int = 10, mode: str = '_Replace'):
+        ''' 
+        Uses word embeddings to expand a set of terms within derived from a set of maintenance work order descriptions docs
         
-        # for term in initial_terms
-        #   get similar terms to term
-        #   filter for new terms (not in initial_terms)
-        #   select additional terms
-        #   capture additional terms
-        #   capture irrelevant terms diff(set(add_terms), set(similar terms))
+        Parameters
+        ----------
+        model : Word2Vec object
+            Pre-trained word2vec model
+        docs : List
+            Set of documents pertaining to maintenance work order descriptions
+        terms : TODO: remember what I meant here...
+            ...
+        topn : Int
+            Number of results to provide the user at each iteration
+        mode : Str
+            Mode for EOL term classification - options: replace or repair
+        
+        Returns
+        -------
+
+        
+        Notes
+        -----
+        Process pseudo-code:
+        ```for term in initial_terms
+            get similar terms to term
+            filter for new terms (not in initial_terms)
+            select additional terms
+            capture additional terms
+            capture irrelevant terms diff(set(add_terms), set(similar terms))
+        ```
+
+        '''
         
         active = True
         start_time = time.time()
@@ -82,16 +125,37 @@ class EOLExpander:
         
         while active:
             try:
-                def get_similar_terms(term, irrelevant_terms, topn):
-                    ''' Iteratively searches for topn similar terms whilst negating irrelevant terms '''
+                def get_similar_terms(term: str, irrelevant_terms: list, topn: int):
+                    '''
+                    Iterative search for topn similar terms whilst negating irrelevant terms 
+                    
+                    Parameters
+                    ----------
+                    term : Str
+                        Current term used for similarity matching with word2vec model
+                    irrelevant_terms : List
+                        List of terms deemed irrelevant by user, cached over 
+                        the expansion process so they are not presented multiple times
+                    topn : Int
+                        Number of results to provide the user at each iteration
+                    
+                    Results
+                    -------
+                    
+                    
+                    Notes
+                    -----
+                    
+                    
+                    '''
                     
                     tries = 0
                     max_tries = 100
                     similar_terms = []
                     similar_terms_proba = []
+                    
                     while len(similar_terms) <= topn:
                         similar_terms_temp, similar_terms_proba_temp = zip(*model.most_similar([term], topn = topn*10))#(topn-len(similar_terms))))
-                        
                         # remove similar terms already in terms list
                         new_terms_idx = [idx for idx, similar_term in enumerate(similar_terms_temp) if similar_term not in irrelevant_terms]
                         # slice terms and proba lists
@@ -115,7 +179,7 @@ class EOLExpander:
                 additional_terms = []
                 for term in terms:
                     try:
-                        similar_terms, similar_terms_proba = get_similar_terms(term, irrelevant_terms=terms+irrelevant_terms, topn=topn)
+                        similar_terms, similar_terms_proba = get_similar_terms(term, irrelevant_terms = terms+irrelevant_terms, topn = topn)
                         
                         if similar_terms is None:
                             print(f'No term in embedding model for {term}')
@@ -159,7 +223,8 @@ class EOLExpander:
                 
                 terms.extend(list(set(additional_terms)))
                 terms_out = "\n".join(list(set(terms)))
-                active = False  # Finished going through the terms
+                # Finished going through the terms
+                active = False
 
             except KeyboardInterrupt:
                 active = False
@@ -171,7 +236,18 @@ class EOLExpander:
         
         return df
 
-def controller(config_path):
+
+def controller(config_path: str):
+    '''
+    Controller for the execution of the entire term expansion process
+
+    Parameters
+    ----------
+    config_path : Str
+        Path to configuration file on disk
+    
+    '''
+    
     config = load_config(path = config_path)
     # Instatiate classes
     dl = DataLoader(config)
@@ -198,7 +274,6 @@ def controller(config_path):
     token_path = Path(config['File']['outputDir']) / 'token_file.xlsx'
     df.to_excel(token_path, index = False)
 
-
 if __name__ == '__main__':
-    config_path = './exp/A/config_A_S2.yml'
+    config_path = 'cofig_template.yml'
     controller(config_path)
