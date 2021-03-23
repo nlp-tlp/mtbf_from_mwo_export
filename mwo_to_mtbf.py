@@ -1,5 +1,5 @@
 ''' 
-Script for standardised and scalable conversion of maintenance work orders to MTTF estimates
+Script for standardised and scalable conversion of maintenance work orders to MTBF estimates
 
 @authors: Tyler Bikaun & Melinda Hodkiewicz
 '''
@@ -254,7 +254,7 @@ class DataWrangler(DataLoader):
 
 
 class ParameterEstimator(DataWrangler):
-    """ Outputs MTTF, Beta, Eta and associated failure instances (free-text) in JSON"""
+    """ Outputs MTBF, Beta, Eta and associated failure instances (free-text) in JSON"""
     def __init__(self, config):
         DataWrangler.__init__(self, config)
 
@@ -263,7 +263,7 @@ class ParameterEstimator(DataWrangler):
         self.no_data_points = config['Calculation']['noDataPoints']
 
         self.preprocess_fs_data()
-        self.calculate_mttf()
+        self.calculate_mtbf()
         self.save_results()
 
     def preprocess_fs_data(self):
@@ -300,8 +300,8 @@ class ParameterEstimator(DataWrangler):
         # This is used for validation of F and S counts
         self.mntn_data_fs_ss_counts = self.mntn_data_fs_ss.groupby(['FUNCTIONAL_LOC'])['FAILURE_OR_SUSPENSION'].agg(['count', count_failure, count_suspension])
 
-    def calculate_mttf(self):
-        """ Calculates MTTF from two parameter Weibull 
+    def calculate_mtbf(self):
+        """ Calculates MTBF from two parameter Weibull 
 
             This is adapted from the following notebook: https://github.com/uwasystemhealth/weibull-python/blob/master/weibull-python.ipynb
             
@@ -320,9 +320,9 @@ class ParameterEstimator(DataWrangler):
         # Remove any groupby object with less than specified points
         fs_data_ss = fs_data_ss.groupby(['FUNCTIONAL_LOC']).filter(lambda x: self.no_data_points <= len(x))
 
-        def compute_single_mttf(series):
+        def compute_single_mtbf(series):
             """
-            Computes a single MTTF estimate via 2P Weibull plot fitting.
+            Computes a single MTBF estimate via 2P Weibull plot fitting.
             
             Notes:
             - All events with 0.0 time (first occurences) are filtered out
@@ -335,7 +335,7 @@ class ParameterEstimator(DataWrangler):
                 Event occurence and time
             Returns
             -------
-            MTTF : float
+            MTBF : float
                 mean time to failure
             """
             series = series[0 < series['TIME']]   # do not take into account any events that have 0 time...
@@ -356,7 +356,7 @@ class ParameterEstimator(DataWrangler):
                 analysis.fit()
                 analysis.beta = wbfit.beta
                 analysis.eta = wbfit.alpha
-                return pd.Series([analysis.mttf, analysis.beta, analysis.eta])
+                return pd.Series([analysis.mtbf, analysis.beta, analysis.eta])
                 
             elif (1 < len(failures)):
                 wbfit = rb.Fitters.Fit_Weibull_2P(failures=failure_times, show_probability_plot=False)
@@ -364,16 +364,16 @@ class ParameterEstimator(DataWrangler):
                 analysis.fit()
                 analysis.beta = wbfit.beta
                 analysis.eta = wbfit.alpha
-                return pd.Series([analysis.mttf, analysis.beta, analysis.eta])
+                return pd.Series([analysis.mtbf, analysis.beta, analysis.eta])
             else:
                 # print('ONLY CENSORED EVENTS')
                 pass
         
         # Init empty dataframe
-        self.mttf_data = pd.DataFrame()
+        self.mtbf_data = pd.DataFrame()
 
-        # Perform MTTF calculations on all asset groups
-        self.mttf_data[['MTTF', 'BETA', 'ETA']] = fs_data_ss.groupby(['FUNCTIONAL_LOC']).apply(lambda grp: compute_single_mttf(grp))
+        # Perform MTBF calculations on all asset groups
+        self.mtbf_data[['MTBF', 'BETA', 'ETA']] = fs_data_ss.groupby(['FUNCTIONAL_LOC']).apply(lambda grp: compute_single_mtbf(grp))
         
     def save_results(self):
         """ Convert data to JSON and save to disk """
@@ -404,16 +404,16 @@ class ParameterEstimator(DataWrangler):
             'FAILURES': int(self.mntn_data_fs_ss_counts['count_failure'].sum()),
             'SUSPENSIONS': int(self.mntn_data_fs_ss_counts['count_suspension'].sum()),
             'TOTAL_ASSETS': self.mntn_data['FUNCTIONAL_LOC'].nunique(),     # number of assets that went through the filters etc.
-            'MTTF_ASSETS': self.mttf_data.index.nunique()                 # number of assets that had MTTFs calculated
+            'MTBF_ASSETS': self.mtbf_data.index.nunique()                 # number of assets that had MTBFs calculated
         }
         
         # FLOC specific results and data
         output['RESULTS'] = dict()
-        for floc in self.mttf_data.index:
+        for floc in self.mtbf_data.index:
             output['RESULTS'][floc] = {
-                'MTTF': round(self.mttf_data.loc[floc]['MTTF'],2),
-                'ETA': round(self.mttf_data.loc[floc]['ETA'],2),
-                'BETA': round(self.mttf_data.loc[floc]['BETA'],2),
+                'MTBF': round(self.mtbf_data.loc[floc]['MTBF'],2),
+                'ETA': round(self.mtbf_data.loc[floc]['ETA'],2),
+                'BETA': round(self.mtbf_data.loc[floc]['BETA'],2),
                 'COUNTS': {
                     'FAILURE': int(self.mntn_data_fs_ss_counts.loc[floc]['count_failure']),
                     'SUSPENSION': int(self.mntn_data_fs_ss_counts.loc[floc]['count_suspension']),
@@ -424,12 +424,12 @@ class ParameterEstimator(DataWrangler):
                 'WO_DESCRIPTION_NFS': self.mntn_data[(self.mntn_data['FUNCTIONAL_LOC'] == floc) & (self.mntn_data['FAILURE_OR_SUSPENSION'] == 'nan')][['WO_DESCRIPTION', total_cost_or_time_col, 'WO_CLASSIFICATION', 'RETURN_TO_FUNCTION', 'REPAIR_OR_REPLACE','FAILURE_OR_SUSPENSION', 'TIME']].to_dict() # Filtered using NaN in F/S column
             }
 
-        with open(Path(self.config['File']['outputDir']) / 'mttf_results.json', 'w') as fp:
+        with open(Path(self.config['File']['outputDir']) / 'mtbf_results.json', 'w') as fp:
             json.dump(output, fp, indent = 4)
             
         if self.config['File']['saveCSV']:
             cost_or_hours = 'hours' if self.config['Data'].get('TOTAL_ACTUAL_HOURS') else 'cost'
-            json2csv(Path(self.config['File']['outputDir']) / 'mttf_results.json', Path(self.config['File']['outputDir']) / 'mttf_results.csv', cost_or_hours)
+            json2csv(Path(self.config['File']['outputDir']) / 'mtbf_results.json', Path(self.config['File']['outputDir']) / 'mtbf_results.csv', cost_or_hours)
         
             
 
