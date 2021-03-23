@@ -5,9 +5,7 @@ Master controller for pipeline.
 '''
 
 
-import term_expansion
-import collocations
-import mwo_to_mtbf
+from pipeline import term_expansion, collocations, mwo_to_mtbf
 
 def main(config_path: str):
     ''' 
@@ -19,6 +17,7 @@ def main(config_path: str):
         Path to configuration file
 
     '''
+	
     term_expansion.controller(config_path)  # Uses w2v and SME to output token_file.xlsx
     collocations.controller(config_path)    # Adds collocations to token file
     mwo_to_mtbf.controller(config_path)     # Performs parameter estimation over MWOs
