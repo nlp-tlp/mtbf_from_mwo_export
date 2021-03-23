@@ -2,7 +2,7 @@
 ## Overview
 This repository contains associated code for conference paper Semi-Automated Estimation of Reliability Measures from Maintenance Work Order Records. 
 
-![pipeline image](https://code-ittc.csiro.au/tyler.bikaun/mtbf_from_mwo/-/blob/master/model_overview.png)
+![pipeline image](https://code-ittc.csiro.au/tyler.bikaun/mtbf_from_mwo/-/raw/master/model_overview.png)
 
 
 ## Installation
