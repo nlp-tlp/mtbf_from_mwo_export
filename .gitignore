@@ -1,9 +1,3 @@
-/flair
-/resources
 /data
-/exp
-/dev
-*.yml
-/analysis
-/dev
+config_test.yml
 /test
