@@ -42,7 +42,7 @@ Once a suitable data set has been selected and the configuration file set, the p
 The term expansion process consists of an iterative process where terms indicative of EOL events are input by the user after being presented with a set of options. The format of the command-line interface shows the `focus term` and top-n similar terms and their respective % similarity.
 
 ### Collocation Identification
-Similar to the term expansion process, collocations are captured through the command-line. In this case a set of collocations are presented (number set in configuration) where each collocation is shown in the following format <term> | <number of occurences in dataset> (<% of dataset>). Collocations are presented as most frequent to least frequent in the dataset.
+Similar to the term expansion process, collocations are captured through the command-line. In this case a set of collocations are presented (number set in configuration) where each collocation is shown in the following format `collocation` | `number of occurences in dataset` (`% of dataset`). Collocations are presented as most frequent to least frequent in the dataset.
 
 ## Further Information
 - An output directory must be specified in the configuration file and must exist before the pipeline is executed. 
