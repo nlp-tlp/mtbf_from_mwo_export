@@ -31,13 +31,23 @@ To use the pipeline within this repository, an extract of maintenance work order
 
 
 ## Usage
-Before executing any code, a configuration file in YAML (.yml) format is required (a template for the configuration file is provided in `config_template.yml with details about field value requirements).
+Before executing any code, a configuration file in YAML (.yml) format is required (a template for the configuration file is provided in `config_template.yml` with details about field value requirements).
 
 Once a suitable data set has been selected and the configuration file set, the pipeline can be executed with `python run.py`. `run.py` will execute the following stages of the pipeline:
 1. Term expansion process via `term_expansion.py`
 2. Collocation identification via `collocations.py`
 3. Parameter estimation via `mwo_to_mtbf.py`
 
+### Term Expansion
+The term expansion process consists of an iterative process where terms indicative of EOL events are input by the user after being presented with a set of options. The format of the command-line interface shows the `focus term` and top-n similar terms and their respective % similarity.
+
+### Collocation Identification
+Similar to the term expansion process, collocations are captured through the command-line. In this case a set of collocations are presented (number set in configuration) where each collocation is shown in the following format <term> | <number of occurences in dataset> (<% of dataset>). Collocations are presented as most frequent to least frequent in the dataset.
+
+## Further Information
+- An output directory must be specified in the configuration file and must exist before the pipeline is executed. 
+- The term expansion process expects the user to input a seed term - we recommend seeding with the term `replace`.
+- The pipeline ran through `run.py` executes the two stages (in three steps) sequentially, however each stage can be executed by running their respective script located in the `/pipeline` directory. This is recommended if you want to capture more collocations or re-run MTBF estimations as running the pipeline from scratch will require the term expansion process to be performed again.
 
 
 ## Attribution
