@@ -13,7 +13,11 @@ import re
 from datetime import datetime
 from pathlib import Path
 from gensim.models import Word2Vec
-from utils import load_config
+
+try:
+    from pipeline.utils import load_config
+except ImportError:
+    from utils import load_config
 
 
 class DataLoader:
@@ -54,7 +58,7 @@ class EmbeddingTrainer:
         self.window_size = 3
         self.model_size = 300
     
-    def train_model(self, docs: list, iterations: int = 50):
+    def train_model(self, docs: list, iterations: int = 250):
         ''' 
         Trains for word2vec embedding model and provides summary of results
         
@@ -85,7 +89,7 @@ class EmbeddingTrainer:
 
 
 class EOLExpander:
-    def expand_terms(self, model, docs: list, terms, topn: int = 10, mode: str = '_Replace'):
+    def expand_terms(self, model, docs: list, terms, topn: int = 10, mode: str = 'replace'):
         ''' 
         Uses word embeddings to expand a set of terms within derived from a set of maintenance work order descriptions docs
         
@@ -193,13 +197,13 @@ class EOLExpander:
                             new_terms = input('Enter terms to add to list (each term separated by a space):\n')
                             if new_terms != '':
                                 if len(new_terms.split()) > 1:
-                                    print('Multiple terms')
+                                    # print('Multiple terms')
                                     for idx, _ in enumerate(new_terms.split()):
                                         additional_terms.append(new_terms.split()[idx])
                                     # Add additional terms to terms list
                                     terms.extend(new_terms.split())
                                 else:
-                                    print('Single term')
+                                    # print('Single term')
                                     if len(new_terms) > 1:
                                         additional_terms.append(new_terms)
                                     # Add additional term to terms list
@@ -258,16 +262,16 @@ def controller(config_path: str):
     w2v = trainer.train_model(docs = dl.data, iterations = 100)
 
     # Get new terms
-    initial_terms_replace = input('Enter initial replace terms (each term separated by a space):\n')
-    terms_list_replace = initial_terms_replace.split()
-    df_replace = expander.expand_terms(model = w2v, docs = dl.data, terms = terms_list_replace, mode = '_Replace')
+    initial_termsreplace = input('Enter initial replace terms (each term separated by a space. hint: replace is a good starting word):\n')
+    terms_listreplace = initial_termsreplace.split()
+    dfreplace = expander.expand_terms(model = w2v, docs = dl.data, terms = terms_listreplace, mode = 'replace')
 
-    initial_terms_repair = input('\nEnter initial repair terms (each term separated by a space):\n')
-    terms_list_repair = initial_terms_repair.split()
-
-    df_repair = expander.expand_terms(model = w2v, docs = dl.data, terms = terms_list_repair, mode = '_Repair')
-
-    df = pd.concat([df_replace, df_repair])
+    # TODO: Determine if keeping this part of the code...
+    initial_termsrepair = input('\nEnter initial repair terms (each term separated by a space. hint: repair is a good starting word):\n')
+    terms_listrepair = initial_termsrepair.split()
+    dfrepair = expander.expand_terms(model = w2v, docs = dl.data, terms = terms_listrepair, mode = 'repair')
+    df = pd.concat([dfreplace, dfrepair])
+    
     df.drop_duplicates(inplace = True)
     
     # Save token list to disk and return as df to downstream components

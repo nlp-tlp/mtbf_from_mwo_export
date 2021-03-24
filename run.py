@@ -4,7 +4,6 @@ Master controller for pipeline.
 @author: Tyler Bikaun
 '''
 
-
 from pipeline import term_expansion, collocations, mwo_to_mtbf
 
 def main(config_path: str):

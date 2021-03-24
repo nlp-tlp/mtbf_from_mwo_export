@@ -13,8 +13,13 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 
-from term_expansion import DataLoader
-from utils import load_config
+try:
+    from pipeline.term_expansion import DataLoader
+    from pipeline.utils import load_config
+except ImportError:
+    from term_expansion import DataLoader
+    from utils import load_config
+
 
 def get_collocations(docs: list, n: int = 100) -> list:
     ''' 
@@ -53,7 +58,7 @@ def get_collocations(docs: list, n: int = 100) -> list:
         for col in collocations.most_common(n):
             col_ngram = f'{col[0][0]} {col[0][1]}'
             output_str =f'{col_ngram:<20} : {col[1]:<5} ({(int(col[1])/len(docs))*100:0.2f}%)'
-            decision = input(f'{output_str} | Add to collocations (Y/N)? ')
+            decision = input(f'{output_str} | Add to collocations (y/n)? ')
             decision = decision.lower()
             if decision == 'y':
                 collocations_kept.extend([col_ngram])
@@ -80,7 +85,7 @@ def controller(config_path: str):
     # Add to token file
     token_df = pd.read_excel(Path(config['File']['outputDir']) / 'token_file.xlsx')
     if len(collocations) > 0:
-        collocation_df = pd.DataFrame(data=zip(collocations, ['_Replace']*len(collocations)), columns=['Term', 'Action'])
+        collocation_df = pd.DataFrame(data=zip(collocations, ['replace']*len(collocations)), columns=['Term', 'Action'])
         # Add collocations to tokens
         token_df = pd.concat([token_df, collocation_df], ignore_index=True)
         # Save token list to disk and return as df to downstream components

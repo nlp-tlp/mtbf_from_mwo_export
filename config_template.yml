@@ -1,0 +1,41 @@
+File:
+  outputDir: # Str | Path to directory to output results such as term vocabulary, embedding weights, etc
+  saveCSV: # Boolean | indicates whether to save output as a CSV
+  workorderPath: # Str | location to .csv or .xlsx file of maintenance work order records from CMMS
+Settings:
+  collocationCandidates: # Int | Number of collocation candidates to present
+Data:
+  CMMSType: # Str | Options: "1SAP", "SAP", "JDE"
+  outputPrefix: # Str | Prefix for discriminating against output data files
+  workorderColNames:
+    FUNCTIONAL_LOC: # Str | Example: "Work Order Functional Location"
+    FUNCTIONAL_LOC_DESC: # Str | Example: "Functional Location Description"
+    WO_DESCRIPTION: # Str | Example: "Work Order Description"
+    CREATION_DATE: # Str | Example: "Work Order Created On Timestamp (UTC)"
+    BASIC_START_DATE: # Str | Example: "Work Order Basic Start Date"
+    BASIC_FINISH_DATE: # Str | Example: "Work Order Basic Finish Date"
+    ACTUAL_START_DATE: # Str | Example: "Work Order Actual Start Timestamp"
+    ACTUAL_FINISH_DATE: # Str | Example: "Work Order Actual Finish Timestamp"
+    TOTAL_ACTUAL_HOURS: # Str | Example: "Work Order Actual Total Hours"
+    TOTAL_ACTUAL_COST: # Str | "Work Order Total Actual Costs"
+    # Classification is either WO TYPE in SAP or Classification in JDE (preventative, corrective, etc.)
+    WO_CLASSIFICATION: # Str | "Work Order Type"
+    # High level object type (if avaialble) - identicates clearly what type of object e.g. pump, motor, conveyor, etc.
+    OBJECT_TYPE: # Str | "Functional Location Object Type Description"
+    ACTIVITY_TYPE: # Str | JDE specific - this has repair, overhaul, rebuild etc, classifications for work orders.
+    additionalCols: # List(Str)
+      - "Assembly Description"
+  filters:
+    dateLower: # Str | Example: "2011-01-01"
+    dateUpper: # Str | Example: ""
+    # objectType will be via substring matching (leave empty if not required)
+    objectType: # Str | Example: "pump"
+    # Drop any rows where NA exists in woDescription or (cost and hours) or actual start datetime
+    dropNA: # Str | Example: True
+    # Minimum total wo cost (dollars)
+    costMin: # Str | Example: 2000
+    # Minimum total wo hours (hrs)
+    hourMin: # Str | Example: 8
+Calculation:
+  # Number of failure/suspension data points required for parameter estimate
+  noDataPoints: # Str | Example: 5

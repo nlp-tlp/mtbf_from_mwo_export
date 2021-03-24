@@ -15,8 +15,11 @@ import weibull as wb
 import re
 import time
 from pathlib import Path
-from utils import load_config, json2csv
 
+try:
+    from pipeline.utils import load_config, json2csv
+except ImportError:
+    from utils import load_config, json2csv
 
 class DataLoader:
     '''Data loader, preprocessor and tokenizer'''
@@ -55,12 +58,12 @@ class DataLoader:
         self.load_tokens()
         
         try:
-            self.repair_selection = self.token_data[self.token_data['Action'] == '_Repair']['Term'].tolist()
+            self.repair_selection = self.token_data[self.token_data['Action'] == 'repair']['Term'].tolist()
         except Exception as e:
             print(f'{datetime.now()}: Error generating repair selection list - {e}')
 
         try:
-            self.replace_selection = self.token_data[self.token_data['Action'] == '_Replace']['Term'].tolist()
+            self.replace_selection = self.token_data[self.token_data['Action'] == 'replace']['Term'].tolist()
         except Exception as e:
             print(f'{datetime.now()}: Error generating replace selection list - {e}')
             
@@ -244,11 +247,7 @@ class DataWrangler(DataLoader):
 
     def token_match(self):
         ''' 
-        Matches _Repair and _Replace tokens in gazetteers with work order free-text
-        
-        Notes
-        -----
-
+        Matches repair and replace tokens in gazetteers with work order free-text
 
         '''
 
@@ -394,7 +393,7 @@ class ParameterEstimator(DataWrangler):
                 analysis.fit()
                 analysis.beta = wbfit.beta
                 analysis.eta = wbfit.alpha
-                return pd.Series([analysis.mtbf, analysis.beta, analysis.eta])
+                return pd.Series([analysis.mttf, analysis.beta, analysis.eta])
                 
             elif (1 < len(failures)):
                 wbfit = rb.Fitters.Fit_Weibull_2P(failures=failure_times, show_probability_plot=False)
@@ -402,7 +401,7 @@ class ParameterEstimator(DataWrangler):
                 analysis.fit()
                 analysis.beta = wbfit.beta
                 analysis.eta = wbfit.alpha
-                return pd.Series([analysis.mtbf, analysis.beta, analysis.eta])
+                return pd.Series([analysis.mttf, analysis.beta, analysis.eta])
             else:
                 pass
         
@@ -473,7 +472,7 @@ class ParameterEstimator(DataWrangler):
 
 def controller(config_path: str):
     ''' 
-    Controller for maintenance work order to mean-time-to-failure pipeline
+    Controller for maintenance work order to mean-time-between-failure pipeline
     
     Parameters
     ----------

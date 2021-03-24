@@ -47,14 +47,14 @@ def json2csv(json_path: str, csv_path: str, cost_or_hours: str='hours'):
     
     '''
     
-    assert json_path.split('.')[-1] == 'json'
-    assert csv_path.split('.')[-1] == 'csv'
+    assert str(json_path).split('.')[-1] == 'json'
+    assert str(csv_path).split('.')[-1] == 'csv'
     
     with open(json_path, 'r') as fjr:
         data = json.load(fjr)
 
     # Create functional location MTBF pairs
-    floc_mttf_data = {'FLOC': [], 'MTTF': [], 'ETA': [], 'BETA': [],
+    floc_mtbf_data = {'FLOC': [], 'MTBF': [], 'ETA': [], 'BETA': [],
                       'COUNTS': [], 'WO_FS_DESC': [], 'WO_FS_TIME': [],
                       f'WO_FS_{cost_or_hours.upper()}': [], "WO_FS_CLF": [],
                       "WO_FS_FOS": [], 'WO_NFS_DESC': [],
@@ -66,7 +66,7 @@ def json2csv(json_path: str, csv_path: str, cost_or_hours: str='hours'):
     # Iterate over data and create structured records
     for result in data:
         floc = result
-        mttf = data[result]["MTTF"] 
+        mtbf = data[result]["MTBF"] 
         eta = data[result]["ETA"]
         beta = data[result]["BETA"]
         counts = "\n".join([f'{name}: {value}' for name, value in data[result]["COUNTS"].items()])
@@ -80,27 +80,27 @@ def json2csv(json_path: str, csv_path: str, cost_or_hours: str='hours'):
         wo_nfs_cost = "\n".join([f'{value}' for name, value in data[result]["WO_DESCRIPTION_NFS"][("TOTAL_ACTUAL_COST" if cost_or_hours == 'cost' else "TOTAL_ACTUAL_HOURS")].items()])
         wo_nfs_clf = "\n".join([f'{value}' for name, value in data[result]["WO_DESCRIPTION_NFS"]["WO_CLASSIFICATION"].items()])
         
-        floc_mttf_data['FLOC'].append(floc)
-        floc_mttf_data['MTTF'].append(mttf)
-        floc_mttf_data['ETA'].append(eta)
-        floc_mttf_data['BETA'].append(beta)
-        floc_mttf_data['COUNTS'].append(counts)
-        floc_mttf_data['WO_FS_DESC'].append(wo_fs_desc)
-        floc_mttf_data['WO_FS_TIME'].append(wo_fs_time)
-        floc_mttf_data[f'WO_FS_{cost_or_hours.upper()}'].append(wo_fs_cost)
-        floc_mttf_data['WO_FS_CLF'].append(wo_fs_clf)
-        floc_mttf_data['WO_FS_FOS'].append(wo_fs_fos)
-        floc_mttf_data['WO_NFS_DESC'].append(wo_nfs_desc)
-        floc_mttf_data[f'WO_NFS_{cost_or_hours.upper()}'].append(wo_nfs_cost)
-        floc_mttf_data['WO_NFS_CLF'].append(wo_nfs_clf)
+        floc_mtbf_data['FLOC'].append(floc)
+        floc_mtbf_data['MTBF'].append(mtbf)
+        floc_mtbf_data['ETA'].append(eta)
+        floc_mtbf_data['BETA'].append(beta)
+        floc_mtbf_data['COUNTS'].append(counts)
+        floc_mtbf_data['WO_FS_DESC'].append(wo_fs_desc)
+        floc_mtbf_data['WO_FS_TIME'].append(wo_fs_time)
+        floc_mtbf_data[f'WO_FS_{cost_or_hours.upper()}'].append(wo_fs_cost)
+        floc_mtbf_data['WO_FS_CLF'].append(wo_fs_clf)
+        floc_mtbf_data['WO_FS_FOS'].append(wo_fs_fos)
+        floc_mtbf_data['WO_NFS_DESC'].append(wo_nfs_desc)
+        floc_mtbf_data[f'WO_NFS_{cost_or_hours.upper()}'].append(wo_nfs_cost)
+        floc_mtbf_data['WO_NFS_CLF'].append(wo_nfs_clf)
         
-    df = pd.DataFrame(floc_mttf_data)
+    df = pd.DataFrame(floc_mtbf_data)
     df.to_csv(csv_path, index = False)
 
 if __name__ == '__main__':
-    mttf_fname_json = 'results.json'
-    mttf_fname_csv = f'{mttf_fname_json.split(".")[0]}.csv'
+    mtbf_fname_json = 'results.json'
+    mtbf_fname_csv = f'{mtbf_fname_json.split(".")[0]}.csv'
     
-    json2csv(json_path = mttf_fname_json,
-             csv_path = mttf_fname_csv,
+    json2csv(json_path = mtbf_fname_json,
+             csv_path = mtbf_fname_csv,
              cost_or_hours = 'cost')
