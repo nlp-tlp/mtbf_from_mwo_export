@@ -1,6 +1,6 @@
 # Semi-automated Estimation of Reliability Measures from Maintenance Work Order Records
 ## Overview
-This repository contains associated code for conference paper Semi-Automated Estimation of Reliability Measures from Maintenance Work Order Records. 
+This repository contains associated code for the conference paper Semi-Automated Estimation of Reliability Measures from Maintenance Work Order Records. 
 
 ![pipeline image](https://code-ittc.csiro.au/tyler.bikaun/mtbf_from_mwo/-/raw/master/model_overview.png)
 
@@ -13,21 +13,21 @@ This repository contains associated code for conference paper Semi-Automated Est
 ## Data
 To use the pipeline within this repository, an extract of maintenance work order records from 1SAP, SAP or JDE is required with the suitable fields available that map to the following:
 
-- FUNCTIONAL_LOC_DESC - e.g. "Functional Location Description"
-- FUNCTIONAL_LOC - e.g. "Work Order Functional Location"
-- WO_DESCRIPTION - e.g. "Work Order Description"
-- CREATION_DATE - e.g. "Work Order Created On Timestamp (UTC)"
-- BASIC_START_DATE - e.g. "Work Order Basic Start Date"
-- BASIC_FINISH_DATE - e.g. "Work Order Basic Finish Date"
-- ACTUAL_START_DATE - e.g. "Work Order Actual Start Timestamp"
-- ACTUAL_FINISH_DATE - e.g. "Work Order Actual Finish Timestamp"
-- TOTAL_ACTUAL_HOURS - e.g. "Work Order Actual Total Hours"
-- TOTAL_ACTUAL_COST - e.g. "Work Order Total Actual Costs"
-- WO_CLASSIFICATION - e.g. "Work Order Type"
+- **FUNCTIONAL_LOC_DESC** - e.g. "Functional Location Description"
+- **FUNCTIONAL_LOC** - e.g. "Work Order Functional Location"
+- **WO_DESCRIPTION** - e.g. "Work Order Description"
+- **CREATION_DATE** - e.g. "Work Order Created On Timestamp (UTC)"
+- **BASIC_START_DATE** - e.g. "Work Order Basic Start Date"
+- **BASIC_FINISH_DATE** - e.g. "Work Order Basic Finish Date"
+- **ACTUAL_START_DATE** - e.g. "Work Order Actual Start Timestamp"
+- **ACTUAL_FINISH_DATE** - e.g. "Work Order Actual Finish Timestamp"
+- **TOTAL_ACTUAL_HOURS** - e.g. "Work Order Actual Total Hours"
+- **TOTAL_ACTUAL_COST** - e.g. "Work Order Total Actual Costs"
+- **WO_CLASSIFICATION** - e.g. "Work Order Type"
 	- Classification is either WO TYPE in SAP or Classification in JDE (preventative, corrective, etc.)
-- OBJECT_TYPE - eg. "Functional Location Object Type Description"
+- **OBJECT_TYPE** - eg. "Functional Location Object Type Description"
 	- This is a high level object type (if avaialble) that identifies clearly what type of object (e.g. pump, motor, conveyor) the work order is associated with.
-- ACTIVITY_TYPE - JDE specific - this has repair, overhaul, rebuild etc, classifications for work orders.
+- **ACTIVITY_TYPE** - JDE specific - this has repair, overhaul, rebuild etc, classifications for work orders.
 
 
 ## Usage
