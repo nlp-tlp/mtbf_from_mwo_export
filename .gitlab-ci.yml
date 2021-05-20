@@ -1,0 +1,36 @@
+image: "python:3.8"
+
+before_script:
+  - python --version
+  - pip install poetry
+  - poetry install
+
+stages:
+  - Static Analysis
+  - Test
+
+pylint:
+  stage: Static Analysis
+  before_script:
+    - pip install pylint pylint-exit anybadge poetry
+  tags:
+    - csiro-swarm
+  allow_failure: false
+  script:
+    - poetry install
+    - mkdir ./pylint
+    - poetry run pylint pipeline --output-format=text | tee ./pylint/pylint.log || pylint-exit $?
+    - PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' ./pylint/pylint.log)
+    - anybadge --label=Pylint --file=pylint/pylint.svg --value=$PYLINT_SCORE 2=red 4=orange 8=yellow 10=green
+    - echo "Pylint score is $PYLINT_SCORE"
+  artifacts:
+    paths:
+      - ./pylint/
+
+unit_test:
+  stage: Test
+  tags:
+    - csiro-swarm
+  script:
+    - echo $CI_CKAN_KEY > ckan_access_key.txt
+    - poetry run python -m pytest --cov=pipeline | perl -pe 's/\e\[?.*?[\@-~]//g'

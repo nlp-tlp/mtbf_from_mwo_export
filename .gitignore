@@ -1,3 +1,10 @@
 /data
 config_test.yml
 /test
+
+.mypy_cache
+__pycache*
+.pytest_cache
+
+.vscode
+.coverage

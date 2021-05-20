@@ -1,0 +1,7 @@
+Functional Location Description,Work Order Functional Location,Work Order Description,Work Order Created On Timestamp (UTC),Work Order Basic Start Date,Work Order Basic Finish Date,Work Order Actual Start Timestamp,Work Order Actual Finish Timestamp,Work Order Actual Total Hours,Work Order Total Actual Costs,Work Order Type,Functional Location Object Type Description,Assembly Description
+test1,test2,repair test3,2021-01-01,2021-01-01,2021-01-01,2021-01-01,2021-01-01,test9,test10,test11,test12,test13
+test1,test2,replace test3,2021-01-01,2021-01-01,2021-01-01,2021-01-01,2021-01-01,test9,test10,test11,test12,test13
+test1,test2,test3 repair,2021-01-01,2021-01-01,2021-01-01,2021-01-01,2021-01-01,test9,test10,test11,test12,test13
+test1,test2,test3 replace,2021-01-01,2021-01-01,2021-01-01,2021-01-01,2021-01-01,test9,test10,test11,test12,test13
+test1,test2,fix test3,2021-01-01,2021-01-01,2021-01-01,2021-01-01,2021-01-01,test9,test10,test11,test12,test13
+test1,test2,test3,2021-01-01,2021-01-01,2021-01-01,2021-01-01,2021-01-01,test9,test10,test11,test12,test13
