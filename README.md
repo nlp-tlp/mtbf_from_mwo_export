@@ -51,14 +51,14 @@ Similar to the term expansion process, collocations are captured through the com
 
 
 ## Attribution
-Please cite our [[conference paper]](https://arxiv.org/abs/####.#####) (to appear in EPHM 2021) if you find it useful in your research:
+Please cite our [[conference paper]](https://papers.phmsociety.org/index.php/phme/issue/view/54) if you find it useful in your research:
 ```
   @inproceedings{bikaun2021semiauto,
       title={Semi-automated Estimation of Reliability Measures from Maintenance Work Order Records},
       author={Bikaun, Tyler, and Hodkiewicz, Melinda},
       journal={European Conference of the Prognostics and Health Management Society, PHM Society'2021.},
-      pages={x--y},
-      year={2021}
+      year={2021},
+      vol={6}
 }
 ```
 
